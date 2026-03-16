@@ -6,6 +6,7 @@ from .config import ModelConfig, RuntimeConfig
 from .models import ParsedAnswerScript
 from .orchestrator import EvaluationOrchestrator
 from .providers.openai_provider import OpenAIJsonProvider
+from .providers.router import MultiProviderRouter
 
 
 def evaluate_script_with_debate(
@@ -16,7 +17,16 @@ def evaluate_script_with_debate(
     debate_rounds: int = 4,
     pairing_strategy: Literal["all_to_all", "random", "round_robin"] = "all_to_all",
     random_seed: int = 42,
+    factor_specialists: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    router = MultiProviderRouter(providers={"openai": OpenAIJsonProvider(client=client)}, default_provider="openai")
+    orchestrator = EvaluationOrchestrator(
+        provider=router,
+        model_config=ModelConfig(
+            reviewer_models=reviewer_models,
+            supreme_model=supreme_model,
+            factor_specialists=factor_specialists or {},
+        ),
     provider = OpenAIJsonProvider(client=client)
     orchestrator = EvaluationOrchestrator(
         provider=provider,
