@@ -6,7 +6,6 @@ import argparse
 import logging
 
 
-
 def parse_csv_items(raw: str) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
@@ -69,11 +68,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Reviewer pairing strategy for each debate round",
     )
     parser.add_argument("--random_seed", type=int, default=42, help="Random seed for random pairing")
-
-    parser.add_argument("--openai_api_key", default=None)
-    parser.add_argument("--openai_base_url", default=None)
-    parser.add_argument("--anthropic_api_key", default=None)
-    parser.add_argument("--gemini_api_key", default=None)
     return parser
 
 
@@ -98,10 +92,6 @@ def main() -> None:
         debate_rounds=args.debate_rounds,
         pairing_strategy=args.pairing_strategy,
         random_seed=args.random_seed,
-        openai_api_key=args.openai_api_key,
-        openai_base_url=args.openai_base_url,
-        anthropic_api_key=args.anthropic_api_key,
-        gemini_api_key=args.gemini_api_key,
     )
 
 

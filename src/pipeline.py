@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 
 import openai
 
@@ -18,13 +19,24 @@ from rocketeval.providers.router import MultiProviderRouter
 logger = logging.getLogger("rich")
 
 
-def build_router(
-    openai_api_key: str | None,
-    openai_base_url: str | None,
-    anthropic_api_key: str | None,
-    gemini_api_key: str | None,
-) -> MultiProviderRouter:
-    """Create router with configured providers; OpenAI-compatible provider is always present."""
+def load_env_file() -> None:
+    """Load environment variables from .env if python-dotenv is available."""
+    try:
+        from dotenv import load_dotenv  # type: ignore
+    except ImportError:
+        return
+    load_dotenv()
+
+
+def build_router_from_env() -> MultiProviderRouter:
+    """Create provider router from environment variables loaded from .env."""
+    load_env_file()
+
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    openai_base_url = os.getenv("OPENAI_BASE_URL")
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+
     providers = {
         "openai": OpenAIJsonProvider(client=openai.OpenAI(api_key=openai_api_key, base_url=openai_base_url))
     }
@@ -46,13 +58,9 @@ def run_exam_review_pipeline(
     debate_rounds: int,
     pairing_strategy: str,
     random_seed: int,
-    openai_api_key: str | None = None,
-    openai_base_url: str | None = None,
-    anthropic_api_key: str | None = None,
-    gemini_api_key: str | None = None,
 ) -> None:
     """Evaluate all scripts in input JSONL and write result JSONL."""
-    router = build_router(openai_api_key, openai_base_url, anthropic_api_key, gemini_api_key)
+    router = build_router_from_env()
     orchestrator = EvaluationOrchestrator(
         provider=router,
         model_config=ModelConfig(

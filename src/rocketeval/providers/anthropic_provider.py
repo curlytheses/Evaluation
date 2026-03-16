@@ -1,34 +1,34 @@
+"""Anthropic provider using official Python SDK."""
+
+from __future__ import annotations
+
 import json
-import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 
-@dataclass
+@dataclass(slots=True)
 class AnthropicJsonProvider:
     api_key: str
     max_tokens: int = 1500
     temperature: float = 0.0
+    _client: Any = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        try:
+            import anthropic  # type: ignore
+        except ImportError as exc:
+            raise ImportError(
+                "Anthropic SDK is required. Install with `pip install anthropic`."
+            ) from exc
+        self._client = anthropic.Anthropic(api_key=self.api_key)
 
     def complete_json(self, model: str, prompt: str) -> dict:
-        payload = json.dumps(
-            {
-                "model": model,
-                "max_tokens": self.max_tokens,
-                "temperature": self.temperature,
-                "messages": [{"role": "user", "content": prompt}],
-            }
-        ).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.anthropic.com/v1/messages",
-            data=payload,
-            method="POST",
-            headers={
-                "x-api-key": self.api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
+        response = self._client.messages.create(
+            model=model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            messages=[{"role": "user", "content": prompt}],
         )
-        with urllib.request.urlopen(req) as resp:
-            raw = json.loads(resp.read().decode("utf-8"))
-        text_parts = [part.get("text", "") for part in raw.get("content", []) if part.get("type") == "text"]
+        text_parts = [part.text for part in response.content if getattr(part, "type", "") == "text"]
         return json.loads("".join(text_parts) or "{}")
