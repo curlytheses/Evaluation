@@ -1,30 +1,40 @@
-## 🎓 Exam Answer Evaluation with Multi-LLM Debate
+## 🎓 RocketEval: Multi-LLM IIT-Style Answer Script Evaluation
 
-RocketEval now includes a full answer-script evaluation pipeline designed for rigorous exam grading workflows:
+This project implements a modular, production-oriented grading workflow for parsed exam answer scripts:
 
-1. Multiple reviewer LLMs independently grade each parsed answer script against weighted rubric factors.
-2. Each reviewer returns:
-   - factor-wise marks
-   - total marks
-   - one justification
-3. Reviewers enter a multi-round debate to support or contradict peers and may revise scores.
-4. If all reviewers support each other during the latest two rounds, debate converges early.
-5. A supreme reviewer receives all scores, factors, and debate traces, and can override any prior decision.
-6. Final outputs include:
-   - final marks
-   - final justification
-   - improvement areas for the student
+1. **Independent reviewer stage**: multiple LLM reviewers score each factor and provide one evidence-grounded justification.
+2. **Structured debate stage**: reviewers support/contradict each other and can revise their own scores over multiple rounds.
+3. **Convergence detection**: debate exits early when reviewers mutually support each other across the latest two rounds.
+4. **Supreme adjudication stage**: a final (supreme) model receives all reviewer assessments + debate trace and can override any score/reasoning.
+5. **Final output**: factor-wise marks, final total marks, final justification, and improvement areas.
 
-### Input format for parsed answer scripts
+---
 
-Each line in `input_file` must be JSON with this schema:
+## Architecture (modular)
+
+- `src/rocketeval/models.py`: domain schemas (script, assessments, debate turns, supreme result)
+- `src/rocketeval/config.py`: runtime + model configuration contracts
+- `src/rocketeval/prompts.py`: prompt builders for reviewer/debate/supreme phases
+- `src/rocketeval/providers/`: LLM provider layer (`openai_provider`, `mock_provider`, protocol)
+- `src/rocketeval/orchestrator.py`: end-to-end evaluation orchestration
+- `src/rocketeval/debate.py`: peer pairing and convergence logic
+- `src/rocketeval/validators.py`: score clipping/normalization
+- `src/rocketeval/io.py`: parsed-script loading utilities
+- `src/pipeline.py`: batch pipeline driver
+- `run_exam_review.py`: CLI entrypoint
+
+---
+
+## Input format
+
+Each line in the input JSONL file should look like:
 
 ```json
 {
   "script_id": "script-001",
   "question_id": "q-1",
   "question_text": "Prove ...",
-  "answer_text": "Student's parsed answer script text ...",
+  "answer_text": "Student's parsed answer script ...",
   "max_marks": 15,
   "factors": [
     {"name": "concept_accuracy", "weight": 6, "description": "Core concepts and correctness"},
@@ -34,12 +44,16 @@ Each line in `input_file` must be JSON with this schema:
 }
 ```
 
-### Run the pipeline
+Sample: `config/template/exam_parsed_script.sample.jsonl`
+
+---
+
+## Run
 
 ```bash
-python src/run_exam_review.py \
-  --input_file data/exam/parsed_scripts.jsonl \
-  --output_file data/exam/review_results.jsonl \
+python run_exam_review.py \
+  --input_file config/template/exam_parsed_script.sample.jsonl \
+  --output_file outputs/review_results.jsonl \
   --reviewer_models gpt-4o,deepseek-chat,qwen-max \
   --supreme_model gpt-4o \
   --debate_rounds 6 \
@@ -47,6 +61,15 @@ python src/run_exam_review.py \
 ```
 
 Pairing strategies:
-- `all_to_all`: each reviewer debates against all peers every round.
-- `random`: each reviewer debates a random peer each round.
-- `round_robin`: each reviewer debates the next reviewer cyclically.
+
+- `all_to_all`
+- `random`
+- `round_robin`
+
+---
+
+## Notes
+
+- OpenAI-compatible endpoints are supported via `--base_url`.
+- Supreme reviewer is allowed to contradict and override prior reviewers.
+- For deterministic local tests without external LLM calls, use `MockJsonProvider` from `src/rocketeval/providers/mock_provider.py`.
