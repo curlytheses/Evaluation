@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from typing import Literal
 
+
 @dataclass
 class Factor:
     name: str
     weight: float
     description: str
+
 
 @dataclass
 class ParsedAnswerScript:
@@ -16,6 +18,7 @@ class ParsedAnswerScript:
     max_marks: float
     factors: list[Factor]
 
+
 @dataclass
 class ReviewerAssessment:
     reviewer_id: str
@@ -23,6 +26,15 @@ class ReviewerAssessment:
     factor_scores: dict[str, float]
     total_score: float
     justification: str
+
+
+@dataclass
+class FactorCheck:
+    factor_name: str
+    model: str
+    score: float
+    justification: str
+
 
 @dataclass
 class DebateTurn:
@@ -33,6 +45,7 @@ class DebateTurn:
     revised_factor_scores: dict[str, float]
     revised_total_score: float
     revised_justification: str
+
 
 @dataclass
 class SupremeReview:
