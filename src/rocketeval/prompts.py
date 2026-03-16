@@ -1,12 +1,12 @@
 import json
 from dataclasses import asdict
 
-from .models import DebateTurn, ParsedAnswerScript, ReviewerAssessment
+from .models import DebateTurn, FactorCheck, ParsedAnswerScript, ReviewerAssessment
+
 
 def factor_schema(script: ParsedAnswerScript) -> str:
-    return "\n".join(
-        [f"- {f.name} (weight={f.weight}): {f.description}" for f in script.factors]
-    )
+    return "\n".join([f"- {f.name} (weight={f.weight}): {f.description}" for f in script.factors])
+
 
 def review_prompt(script: ParsedAnswerScript) -> str:
     return f"""
@@ -33,6 +33,26 @@ Rules:
 - Penalize factual errors and missing key steps.
 - Keep score internally consistent: sum(factor_scores) ~= total_score (difference <= 0.25).
 """.strip()
+
+
+def factor_review_prompt(script: ParsedAnswerScript, factor_name: str, factor_weight: float, factor_description: str) -> str:
+    return f"""
+You are a dedicated specialist evaluator for ONLY ONE factor in an IIT-level exam review.
+
+Question:
+{script.question_text}
+
+Student answer:
+{script.answer_text}
+
+Evaluate only this factor:
+- {factor_name} (weight={factor_weight}): {factor_description}
+
+Return JSON with:
+- score: numeric in [0, {factor_weight}]
+- justification: one concise evidence-based justification focused only on {factor_name}
+""".strip()
+
 
 def debate_prompt(
     script: ParsedAnswerScript,
@@ -77,10 +97,12 @@ Return JSON with keys:
 - revised_justification: string
 """.strip()
 
+
 def supreme_prompt(
     script: ParsedAnswerScript,
     assessments: list[ReviewerAssessment],
     debate_transcript: list[DebateTurn],
+    factor_checks: list[FactorCheck],
 ) -> str:
     return f"""
 You are the supreme reviewer for IIT-level evaluation quality assurance.
@@ -96,11 +118,14 @@ Max marks: {script.max_marks}
 Rubric factors:
 {factor_schema(script)}
 
-Initial reviewer assessments JSON:
+Final reviewer assessments JSON:
 {json.dumps([asdict(a) for a in assessments], indent=2)}
 
 Debate transcript JSON:
 {json.dumps([asdict(t) for t in debate_transcript], indent=2)}
+
+Dedicated factor-specialist checks JSON:
+{json.dumps([asdict(fc) for fc in factor_checks], indent=2)}
 
 Return JSON with keys:
 - final_factor_scores: object mapping each factor to marks
