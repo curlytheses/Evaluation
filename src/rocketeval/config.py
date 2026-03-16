@@ -16,6 +16,7 @@ class ModelConfig:
     reviewer_models: list[str] = field(default_factory=list)
     supreme_model: str = "openai:gpt-4o"
     factor_specialists: dict[str, str] = field(default_factory=dict)
+    supreme_model: str = "gpt-4o"
 
     def validate(self) -> None:
         if len(self.reviewer_models) < 2:

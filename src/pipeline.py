@@ -10,6 +10,7 @@ from rocketeval.providers.anthropic_provider import AnthropicJsonProvider
 from rocketeval.providers.gemini_provider import GeminiJsonProvider
 from rocketeval.providers.openai_provider import OpenAIJsonProvider
 from rocketeval.providers.router import MultiProviderRouter
+from rocketeval.providers.openai_provider import OpenAIJsonProvider
 
 logger = logging.getLogger("rich")
 
@@ -42,6 +43,11 @@ def run_exam_review_pipeline(
             supreme_model=supreme_model,
             factor_specialists=factor_specialists,
         ),
+    client = openai.OpenAI(api_key=api_key, base_url=base_url)
+    provider = OpenAIJsonProvider(client=client)
+    orchestrator = EvaluationOrchestrator(
+        provider=provider,
+        model_config=ModelConfig(reviewer_models=reviewer_models, supreme_model=supreme_model),
         runtime_config=RuntimeConfig(
             debate_rounds=debate_rounds,
             pairing_strategy=pairing_strategy,
