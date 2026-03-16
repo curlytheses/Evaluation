@@ -1,7 +1,9 @@
+from dataclasses import dataclass
 import openai
 from ..llm import chat_json
 
-class OpenAIJsonProvider:
+@dataclass(slots=True)
+class OpenAIProvider:
     client: openai.OpenAI
     temperature: float = 0.0
     max_tokens: int = 1500

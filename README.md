@@ -1,6 +1,6 @@
-## 🎓 RocketEval: Multi-LLM IIT-Style Answer Script Evaluation
+## Multi-LLM Answer Script Evaluation
 
-This system supports **multi-provider reviewer ensembles** (Gemini, Anthropic, Qwen/OpenAI-compatible, others) and an **OpenAI supreme adjudicator**.
+This system supports **multi-provider reviewer ensembles** (Gemini, Anthropic, Qwen, Gemma, Groq) and an **OpenAI supreme adjudicator**.
 
 ### End-to-end flow
 
@@ -57,8 +57,10 @@ At minimum include:
 - `concept_accuracy`
 - `derivation`
 - `clarity`
+- `reasoning_quality`
+- `completeness`
 
-You can add more rubric factors depending on exam style, e.g. `completeness`, `logical_structure`, `notation`, `edge_case_handling`.
+We can extend with more rubric factors depending on exam style, e.g.  `logical_structure`, `notation`, `edge_case_handling`.
 
 ## Engineering notes
 

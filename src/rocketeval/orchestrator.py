@@ -3,7 +3,6 @@ import logging
 import random
 from dataclasses import asdict
 from typing import Any
-
 from .config import ModelConfig, RuntimeConfig
 from .debate import all_supporting_last_two_rounds, select_peer_set
 from .models import DebateTurn, Factor, FactorCheck, ParsedAnswerScript, ReviewerAssessment, SupremeReview

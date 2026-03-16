@@ -2,52 +2,96 @@ import json
 from dataclasses import asdict
 from .models import DebateTurn, FactorCheck, ParsedAnswerScript, ReviewerAssessment
 
+
 def factor_schema(script: ParsedAnswerScript) -> str:
-    return "\n".join([f"- {f.name} (weight={f.weight}): {f.description}" for f in script.factors])
+    return "\n".join(
+        [f"- {f.name} (weight={f.weight}): {f.description}" for f in script.factors]
+    )
+
 
 def review_prompt(script: ParsedAnswerScript) -> str:
     return f"""
-You are an IIT-level strict exam evaluator.
+ROLE
+You are an exam answerscript evaluator.
 
+TASK
+Evaluate the student's answer using the provided rubric factors.
+
+INPUT
 Question:
 {script.question_text}
 
-Student answer:
+Student Answer:
 {script.answer_text}
 
-Max marks: {script.max_marks}
+Max Marks:
+{script.max_marks}
 
-Rubric factors:
+Rubric Factors:
 {factor_schema(script)}
 
-Return JSON with:
-- factor_scores: object mapping each factor to awarded marks (0..factor.weight)
-- total_score: number in [0, {script.max_marks}]
-- justification: concise but evidence-based justification with direct references to answer content
+EVALUATION PROCESS
+1. Carefully read the student answer.
+2. Evaluate each rubric factor independently.
+3. Award marks strictly within the allowed range.
+4. Penalize factual errors, missing reasoning, or incomplete steps.
+5. Do NOT assume information not present in the answer.
 
-Rules:
-- Never hallucinate missing points.
-- Penalize factual errors and missing key steps.
-- Keep score internally consistent: sum(factor_scores) ~= total_score (difference <= 0.25).
+OUTPUT FORMAT (STRICT JSON ONLY)
+
+{{
+  "factor_scores": {{
+      "<factor_name>": number
+  }},
+  "total_score": number,
+  "justification": "Concise evidence-based reasoning referencing the answer"
+}}
+
+SCORING RULES
+- factor_scores values must be between 0 and the factor weight.
+- total_score must be between 0 and {script.max_marks}.
+- sum(factor_scores) should approximately equal total_score (difference ≤ 0.25).
+- justification must reference actual answer content.
 """.strip()
+
 
 def factor_review_prompt(script: ParsedAnswerScript, factor_name: str, factor_weight: float, factor_description: str) -> str:
     return f"""
-You are a dedicated specialist evaluator for ONLY ONE factor in an IIT-level exam review.
+ROLE
+You are a specialist evaluator responsible for ONLY ONE rubric factor.
 
+TASK
+Evaluate the student answer for the specified factor.
+
+INPUT
 Question:
 {script.question_text}
 
-Student answer:
+Student Answer:
 {script.answer_text}
 
-Evaluate only this factor:
-- {factor_name} (weight={factor_weight}): {factor_description}
+Factor To Evaluate
+Name: {factor_name}
+Weight: {factor_weight}
+Description: {factor_description}
 
-Return JSON with:
-- score: numeric in [0, {factor_weight}]
-- justification: one concise evidence-based justification focused only on {factor_name}
+EVALUATION PROCESS
+1. Focus only on this factor.
+2. Ignore all other rubric factors.
+3. Use strict evidence from the student's answer.
+4. Do NOT infer missing information.
+
+OUTPUT FORMAT (STRICT JSON ONLY)
+
+{{
+  "score": number,
+  "justification": "Concise evidence-based justification focused on {factor_name}"
+}}
+
+SCORING RULES
+- score must be within [0, {factor_weight}]
 """.strip()
+
 
 def debate_prompt(
     script: ParsedAnswerScript,
@@ -56,41 +100,65 @@ def debate_prompt(
     peers: list[ReviewerAssessment],
     prior_rounds: list[DebateTurn],
 ) -> str:
+
     peer_blob = [asdict(peer) for peer in peers if peer.reviewer_id != reviewer_id]
     round_blob = [asdict(r) for r in prior_rounds if r.reviewer_id == reviewer_id]
 
     return f"""
-You are reviewer {reviewer_id} in a multi-reviewer debate for IIT-level exam grading.
+ROLE
+You are reviewer {reviewer_id} participating in a multi-reviewer debate for grading.
 
+TASK
+Critically analyze peer reviewers' assessments and update your evaluation if necessary.
+
+INPUT
 Question:
 {script.question_text}
 
-Student answer:
+Student Answer:
 {script.answer_text}
 
-Rubric factors:
+Rubric Factors:
 {factor_schema(script)}
 
-Your current assessment JSON:
+Your Current Assessment
 {json.dumps(asdict(assessment), indent=2)}
 
-Peer assessments JSON:
+Peer Reviewer Assessments
 {json.dumps(peer_blob, indent=2)}
 
-Your prior debate turns JSON:
+Your Previous Debate Turns
 {json.dumps(round_blob, indent=2)}
 
-Now debate rigorously:
-1) For each peer reviewer, choose stance: support or contradict.
-2) If contradicting, explain concrete rubric/evidence disagreement in justification.
-3) You may revise your factor scores and total score if convinced.
+DEBATE PROCESS
+1. Compare your assessment with each peer reviewer.
+2. For each peer reviewer decide:
+   - support
+   - contradict
+3. If contradicting:
+   - explain the rubric disagreement
+   - reference specific answer evidence.
+4. If convinced by peers, revise your scores.
 
-Return JSON with keys:
-- stance_by_reviewer: object mapping peer reviewer_id -> "support" | "contradict"
-- revised_factor_scores: object mapping factor name -> numeric marks
-- revised_total_score: numeric
-- revised_justification: string
+OUTPUT FORMAT (STRICT JSON ONLY)
+
+{{
+  "stance_by_reviewer": {{
+      "<reviewer_id>": "support | contradict"
+  }},
+  "revised_factor_scores": {{
+      "<factor_name>": number
+  }},
+  "revised_total_score": number,
+  "revised_justification": "Updated reasoning referencing rubric and answer"
+}}
+
+RULES
+- revised_total_score must remain within valid range.
+- revised_factor_scores must follow factor weights.
+- justification must clearly explain any revisions.
 """.strip()
+
 
 def supreme_prompt(
     script: ParsedAnswerScript,
@@ -98,33 +166,60 @@ def supreme_prompt(
     debate_transcript: list[DebateTurn],
     factor_checks: list[FactorCheck],
 ) -> str:
-    return f"""
-You are the supreme reviewer for IIT-level evaluation quality assurance.
-You may override any prior score or justification.
 
+    return f"""
+ROLE
+You are the Supreme Reviewer responsible for final grading quality assurance.
+
+You may override any reviewer decision if justified.
+
+INPUT
 Question:
 {script.question_text}
 
-Student answer:
+Student Answer:
 {script.answer_text}
 
-Max marks: {script.max_marks}
-Rubric factors:
+Max Marks:
+{script.max_marks}
+
+Rubric Factors:
 {factor_schema(script)}
 
-Final reviewer assessments JSON:
+Final Reviewer Assessments
 {json.dumps([asdict(a) for a in assessments], indent=2)}
 
-Debate transcript JSON:
+Debate Transcript
 {json.dumps([asdict(t) for t in debate_transcript], indent=2)}
 
-Dedicated factor-specialist checks JSON:
+Factor Specialist Checks
 {json.dumps([asdict(fc) for fc in factor_checks], indent=2)}
 
-Return JSON with keys:
-- final_factor_scores: object mapping each factor to marks
-- final_total_score: numeric in [0, {script.max_marks}]
-- final_justification: string
-- improvement_areas: list of concrete improvement bullets for student
-- override_notes: list describing where and why you changed reviewer decisions
+DECISION PROCESS
+1. Review the student answer carefully.
+2. Analyze reviewer scores and debate disagreements.
+3. Check factor specialist evaluations.
+4. Resolve inconsistencies or scoring errors.
+5. Produce the final authoritative score.
+
+OUTPUT FORMAT (STRICT JSON ONLY)
+
+{{
+  "final_factor_scores": {{
+      "<factor_name>": number
+  }},
+  "final_total_score": number,
+  "final_justification": "Clear reasoning referencing rubric and answer",
+  "improvement_areas": [
+      "Specific improvement suggestion"
+  ],
+  "override_notes": [
+      "Explain where reviewer decisions were overridden and why"
+  ]
+}}
+
+RULES
+- final_total_score must be within [0, {script.max_marks}]
+- final_factor_scores must respect factor weights.
+- Justification must reference evidence from the answer.
 """.strip()

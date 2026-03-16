@@ -1,31 +1,30 @@
-from __future__ import annotations
+from dataclasses import dataclass
 import json
-from dataclasses import field
-from typing import Any
+from google import genai
 
-class GeminiJsonProvider:
-    api_key: str
+@dataclass(slots=True)
+class GeminiProvider:
+    client: genai.Client
     temperature: float = 0.0
-    _client: Any = field(init=False, repr=False)
-
-    def __post_init__(self) -> None:
-        try:
-            import google.generativeai as genai  # type: ignore
-        except ImportError as exc:
-            raise ImportError(
-                "Google Generative AI SDK is required. Install with `pip install google-generativeai`."
-            ) from exc
-
-        genai.configure(api_key=self.api_key)
-        self._client = genai
+    max_tokens: int = 1500
 
     def complete_json(self, model: str, prompt: str) -> dict:
-        response = self._client.GenerativeModel(model).generate_content(
-            prompt,
-            generation_config={
+        response = self.client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config={
                 "temperature": self.temperature,
+                "max_output_tokens": self.max_tokens,
                 "response_mime_type": "application/json",
             },
         )
-        text = getattr(response, "text", "") or "{}"
-        return json.loads(text)
+
+        text = getattr(response, "text", "").strip()
+
+        if not text:
+            return {}
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            raise ValueError(f"Model returned invalid JSON:\n{text}")

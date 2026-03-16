@@ -1,12 +1,10 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 
 class MockJsonProvider:
     responses: list[dict] | None = None
     responses_by_model: dict[str, list[dict]] | None = None
     calls: list[str] = field(default_factory=list)
-
-    def __post_init__(self) -> None:
-        self._idx = 0
+    _idx: int = field(init=False, default=0, repr=False)
 
     def complete_json(self, model: str, prompt: str) -> dict:
         self.calls.append(model)

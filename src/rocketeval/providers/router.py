@@ -2,13 +2,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+
 class JsonProvider(Protocol):
     def complete_json(self, model: str, prompt: str) -> dict:
         """Execute a completion and return parsed JSON."""
 
+
+@dataclass(slots=True)
 class MultiProviderRouter:
     providers: dict[str, JsonProvider]
     default_provider: str = "openai"
+
+    def __post_init__(self) -> None:
+        if not self.providers:
+            raise ValueError("At least one provider must be configured.")
+        if self.default_provider not in self.providers:
+            available = ", ".join(sorted(self.providers.keys()))
+            raise ValueError(
+                f"Default provider '{self.default_provider}' not available. Choose from: {available}"
+            )
 
     def complete_json(self, agent_model: str, prompt: str) -> dict:
         provider_name, model = self._split_agent_model(agent_model)

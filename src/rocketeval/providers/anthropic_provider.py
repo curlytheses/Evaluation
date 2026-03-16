@@ -1,29 +1,29 @@
-from __future__ import annotations
+from dataclasses import dataclass
 import json
-from dataclasses import field
-from typing import Any
+import anthropic
 
-class AnthropicJsonProvider:
-    api_key: str
-    max_tokens: int = 1500
+@dataclass(slots=True)
+class AnthropicProvider:
+    client: anthropic.Anthropic
     temperature: float = 0.0
-    _client: Any = field(init=False, repr=False)
-
-    def __post_init__(self) -> None:
-        try:
-            import anthropic  # type: ignore
-        except ImportError as exc:
-            raise ImportError(
-                "Anthropic SDK is required. Install with `pip install anthropic`."
-            ) from exc
-        self._client = anthropic.Anthropic(api_key=self.api_key)
+    max_tokens: int = 1500
 
     def complete_json(self, model: str, prompt: str) -> dict:
-        response = self._client.messages.create(
+        response = self.client.messages.create(
             model=model,
+            messages=[{"role": "user", "content": prompt}],
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            messages=[{"role": "user", "content": prompt}],
         )
-        text_parts = [part.text for part in response.content if getattr(part, "type", "") == "text"]
-        return json.loads("".join(text_parts) or "{}")
+
+        text = "".join(
+            part.text for part in response.content if part.type == "text"
+        ).strip()
+
+        if not text:
+            return {}
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            raise ValueError(f"Model returned invalid JSON:\n{text}")
