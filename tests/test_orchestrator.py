@@ -1,9 +1,8 @@
-from rocketeval.config import ModelConfig, RuntimeConfig
-from rocketeval.models import Factor, ParsedAnswerScript
-from rocketeval.orchestrator import EvaluationOrchestrator
-from rocketeval.providers.mock_provider import MockJsonProvider
-from rocketeval.providers.router import MultiProviderRouter
-
+from src.rocketeval.config import ModelConfig, RuntimeConfig
+from src.rocketeval.models import Factor, ParsedAnswerScript
+from src.rocketeval.orchestrator import EvaluationOrchestrator
+from src.rocketeval.providers.mock_provider import MockJsonProvider
+from src.rocketeval.providers.router import MultiProviderRouter
 
 def test_orchestrator_with_multi_llm_factor_specialists_and_supreme():
     script = ParsedAnswerScript(

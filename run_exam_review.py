@@ -1,14 +1,9 @@
-"""CLI entrypoint for multi-LLM IIT-style answer evaluation."""
-
 from __future__ import annotations
-
 import argparse
 import logging
 
-
 def parse_csv_items(raw: str) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
-
 
 def parse_factor_specialists(raw: str) -> dict[str, str]:
     mapping: dict[str, str] = {}
@@ -26,7 +21,6 @@ def parse_factor_specialists(raw: str) -> dict[str, str]:
             )
         mapping[factor] = model
     return mapping
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -70,7 +64,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--random_seed", type=int, default=42, help="Random seed for random pairing")
     return parser
 
-
 def main() -> None:
     from rich.logging import RichHandler
 
@@ -81,7 +74,7 @@ def main() -> None:
     reviewer_models = parse_csv_items(args.reviewer_models)
     factor_specialists = parse_factor_specialists(args.factor_specialists)
 
-    from pipeline import run_exam_review_pipeline
+    from src.pipeline import run_exam_review_pipeline
 
     run_exam_review_pipeline(
         input_file=args.input_file,
