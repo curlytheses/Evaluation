@@ -44,7 +44,11 @@ python run_exam_review.py \
   --factor_specialists concept_accuracy=gemini:gemini-1.5-pro,derivation=anthropic:claude-3-5-sonnet,clarity=openai:qwen-max \
   --supreme_model openai:gpt-4o \
   --debate_rounds 6 \
-  --pairing_strategy all_to_all
+  --pairing_strategy all_to_all \
+  --openai_api_key $OPENAI_API_KEY \
+  --openai_base_url $OPENAI_BASE_URL \
+  --anthropic_api_key $ANTHROPIC_API_KEY \
+  --gemini_api_key $GEMINI_API_KEY
 ```
 
 ## Recommended factors

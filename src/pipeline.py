@@ -77,7 +77,6 @@ def run_exam_review_pipeline(
 
     scripts = load_parsed_scripts(input_file)
     ensure_parent_dir(output_file)
-
     with open(output_file, "w", encoding="utf-8") as file:
         for script in scripts:
             result = orchestrator.evaluate_script(script)
