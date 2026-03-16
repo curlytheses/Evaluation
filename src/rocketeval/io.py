@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
-
 from .models import Factor, ParsedAnswerScript
-
 
 def load_parsed_scripts(input_file: str) -> list[ParsedAnswerScript]:
     scripts: list[ParsedAnswerScript] = []

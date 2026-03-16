@@ -26,13 +26,10 @@ def select_peer_set(
 def all_supporting_last_two_rounds(turns: list[DebateTurn], reviewer_ids: list[str]) -> bool:
     if len(turns) < 2 * len(reviewer_ids):
         return False
-
     last_two_round_ids = sorted({turn.round_id for turn in turns})[-2:]
     latest_turns = [turn for turn in turns if turn.round_id in last_two_round_ids]
-
     if len(latest_turns) < 2 * len(reviewer_ids):
         return False
-
     for turn in latest_turns:
         if not turn.stance_by_reviewer:
             return False

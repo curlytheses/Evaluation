@@ -1,12 +1,9 @@
 import json
 from dataclasses import asdict
-
 from .models import DebateTurn, FactorCheck, ParsedAnswerScript, ReviewerAssessment
-
 
 def factor_schema(script: ParsedAnswerScript) -> str:
     return "\n".join([f"- {f.name} (weight={f.weight}): {f.description}" for f in script.factors])
-
 
 def review_prompt(script: ParsedAnswerScript) -> str:
     return f"""
@@ -34,7 +31,6 @@ Rules:
 - Keep score internally consistent: sum(factor_scores) ~= total_score (difference <= 0.25).
 """.strip()
 
-
 def factor_review_prompt(script: ParsedAnswerScript, factor_name: str, factor_weight: float, factor_description: str) -> str:
     return f"""
 You are a dedicated specialist evaluator for ONLY ONE factor in an IIT-level exam review.
@@ -52,7 +48,6 @@ Return JSON with:
 - score: numeric in [0, {factor_weight}]
 - justification: one concise evidence-based justification focused only on {factor_name}
 """.strip()
-
 
 def debate_prompt(
     script: ParsedAnswerScript,
@@ -96,7 +91,6 @@ Return JSON with keys:
 - revised_total_score: numeric
 - revised_justification: string
 """.strip()
-
 
 def supreme_prompt(
     script: ParsedAnswerScript,

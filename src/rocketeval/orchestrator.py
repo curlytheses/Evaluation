@@ -1,7 +1,4 @@
-"""High-level orchestration for multi-LLM exam script evaluation."""
-
 from __future__ import annotations
-
 import logging
 import random
 from dataclasses import asdict
@@ -18,8 +15,6 @@ logger = logging.getLogger("rich")
 
 
 class EvaluationOrchestrator:
-    """Coordinates reviewer scoring, debate, factor specialists, and supreme adjudication."""
-
     def __init__(self, provider: MultiProviderRouter, model_config: ModelConfig, runtime_config: RuntimeConfig):
         self.provider = provider
         self.model_config = model_config
@@ -28,7 +23,6 @@ class EvaluationOrchestrator:
         self.runtime_config.validate()
 
     def evaluate_script(self, script: ParsedAnswerScript) -> dict[str, Any]:
-        """Run full evaluation for one parsed answer script."""
         initial_assessments = self._initial_reviews(script)
         final_reviewer_assessments, debate_transcript = self._debate(script, initial_assessments)
         factor_checks = self._factor_specialist_reviews(script)

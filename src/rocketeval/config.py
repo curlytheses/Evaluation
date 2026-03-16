@@ -1,17 +1,10 @@
-"""Configuration objects for multi-LLM evaluation runtime and model routing."""
-
 from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import Literal
-
 PairingStrategy = Literal["all_to_all", "random", "round_robin"]
-
 
 @dataclass(frozen=True, slots=True)
 class RuntimeConfig:
-    """Controls debate dynamics and deterministic behavior."""
-
     debate_rounds: int = 6
     pairing_strategy: PairingStrategy = "all_to_all"
     random_seed: int = 42
@@ -20,11 +13,8 @@ class RuntimeConfig:
         if self.debate_rounds < 1:
             raise ValueError("debate_rounds must be >= 1")
 
-
 @dataclass(frozen=True, slots=True)
 class ModelConfig:
-    """Defines reviewer ensemble, factor specialists, and supreme model."""
-
     reviewer_models: list[str] = field(default_factory=list)
     supreme_model: str = "openai:gpt-4o"
     factor_specialists: dict[str, str] = field(default_factory=dict)

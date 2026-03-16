@@ -1,7 +1,5 @@
 from dataclasses import asdict
-
 from .models import ParsedAnswerScript, SupremeReview
-
 
 def summarize_result(script: ParsedAnswerScript, supreme_review: SupremeReview) -> dict:
     return {
