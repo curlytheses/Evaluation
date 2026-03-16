@@ -1,10 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import field
 
-
-@dataclass
 class MockJsonProvider:
-    """Deterministic provider for tests and dry-runs."""
-
     responses: list[dict] | None = None
     responses_by_model: dict[str, list[dict]] | None = None
     calls: list[str] = field(default_factory=list)

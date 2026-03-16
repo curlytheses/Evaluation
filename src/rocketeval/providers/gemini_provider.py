@@ -1,13 +1,8 @@
-"""Gemini provider using official Google Generative AI Python SDK."""
-
 from __future__ import annotations
-
 import json
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import Any
 
-
-@dataclass(slots=True)
 class GeminiJsonProvider:
     api_key: str
     temperature: float = 0.0

@@ -1,13 +1,8 @@
-"""Anthropic provider using official Python SDK."""
-
 from __future__ import annotations
-
 import json
-from dataclasses import dataclass, field
+from dataclasses import field
 from typing import Any
 
-
-@dataclass(slots=True)
 class AnthropicJsonProvider:
     api_key: str
     max_tokens: int = 1500

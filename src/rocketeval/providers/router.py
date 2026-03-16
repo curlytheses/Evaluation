@@ -1,17 +1,11 @@
-"""Provider router for model IDs in provider:model format."""
-
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Protocol
-
 
 class JsonProvider(Protocol):
     def complete_json(self, model: str, prompt: str) -> dict:
         """Execute a completion and return parsed JSON."""
 
-
-@dataclass(slots=True)
 class MultiProviderRouter:
     providers: dict[str, JsonProvider]
     default_provider: str = "openai"
