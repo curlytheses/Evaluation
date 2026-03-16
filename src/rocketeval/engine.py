@@ -27,10 +27,6 @@ def evaluate_script_with_debate(
             supreme_model=supreme_model,
             factor_specialists=factor_specialists or {},
         ),
-    provider = OpenAIJsonProvider(client=client)
-    orchestrator = EvaluationOrchestrator(
-        provider=provider,
-        model_config=ModelConfig(reviewer_models=reviewer_models, supreme_model=supreme_model),
         runtime_config=RuntimeConfig(
             debate_rounds=debate_rounds,
             pairing_strategy=pairing_strategy,

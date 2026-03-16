@@ -1,15 +1,19 @@
+"""Domain models for parsed answer evaluation and adjudication."""
+
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Literal
 
 
-@dataclass
+@dataclass(slots=True)
 class Factor:
     name: str
     weight: float
     description: str
 
 
-@dataclass
+@dataclass(slots=True)
 class ParsedAnswerScript:
     script_id: str
     question_id: str
@@ -19,7 +23,7 @@ class ParsedAnswerScript:
     factors: list[Factor]
 
 
-@dataclass
+@dataclass(slots=True)
 class ReviewerAssessment:
     reviewer_id: str
     model: str
@@ -28,7 +32,7 @@ class ReviewerAssessment:
     justification: str
 
 
-@dataclass
+@dataclass(slots=True)
 class FactorCheck:
     factor_name: str
     model: str
@@ -36,7 +40,7 @@ class FactorCheck:
     justification: str
 
 
-@dataclass
+@dataclass(slots=True)
 class DebateTurn:
     round_id: int
     reviewer_id: str
@@ -47,7 +51,7 @@ class DebateTurn:
     revised_justification: str
 
 
-@dataclass
+@dataclass(slots=True)
 class SupremeReview:
     model: str
     final_factor_scores: dict[str, float]

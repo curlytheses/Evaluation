@@ -1,3 +1,7 @@
+"""Batch pipeline for evaluating parsed answer scripts."""
+
+from __future__ import annotations
+
 import json
 import logging
 
@@ -10,9 +14,27 @@ from rocketeval.providers.anthropic_provider import AnthropicJsonProvider
 from rocketeval.providers.gemini_provider import GeminiJsonProvider
 from rocketeval.providers.openai_provider import OpenAIJsonProvider
 from rocketeval.providers.router import MultiProviderRouter
-from rocketeval.providers.openai_provider import OpenAIJsonProvider
 
 logger = logging.getLogger("rich")
+
+
+def build_router(
+    openai_api_key: str | None,
+    openai_base_url: str | None,
+    anthropic_api_key: str | None,
+    gemini_api_key: str | None,
+) -> MultiProviderRouter:
+    """Create router with configured providers; OpenAI-compatible provider is always present."""
+    providers = {
+        "openai": OpenAIJsonProvider(client=openai.OpenAI(api_key=openai_api_key, base_url=openai_base_url))
+    }
+
+    if anthropic_api_key:
+        providers["anthropic"] = AnthropicJsonProvider(api_key=anthropic_api_key)
+    if gemini_api_key:
+        providers["gemini"] = GeminiJsonProvider(api_key=gemini_api_key)
+
+    return MultiProviderRouter(providers=providers, default_provider="openai")
 
 
 def run_exam_review_pipeline(
@@ -29,25 +51,15 @@ def run_exam_review_pipeline(
     anthropic_api_key: str | None = None,
     gemini_api_key: str | None = None,
 ) -> None:
-    providers = {}
-    providers["openai"] = OpenAIJsonProvider(client=openai.OpenAI(api_key=openai_api_key, base_url=openai_base_url))
-    if anthropic_api_key:
-        providers["anthropic"] = AnthropicJsonProvider(api_key=anthropic_api_key)
-    if gemini_api_key:
-        providers["gemini"] = GeminiJsonProvider(api_key=gemini_api_key)
-
+    """Evaluate all scripts in input JSONL and write result JSONL."""
+    router = build_router(openai_api_key, openai_base_url, anthropic_api_key, gemini_api_key)
     orchestrator = EvaluationOrchestrator(
-        provider=MultiProviderRouter(providers=providers, default_provider="openai"),
+        provider=router,
         model_config=ModelConfig(
             reviewer_models=reviewer_models,
             supreme_model=supreme_model,
             factor_specialists=factor_specialists,
         ),
-    client = openai.OpenAI(api_key=api_key, base_url=base_url)
-    provider = OpenAIJsonProvider(client=client)
-    orchestrator = EvaluationOrchestrator(
-        provider=provider,
-        model_config=ModelConfig(reviewer_models=reviewer_models, supreme_model=supreme_model),
         runtime_config=RuntimeConfig(
             debate_rounds=debate_rounds,
             pairing_strategy=pairing_strategy,

@@ -6,9 +6,6 @@ from rocketeval.providers.router import MultiProviderRouter
 
 
 def test_orchestrator_with_multi_llm_factor_specialists_and_supreme():
-
-
-def test_orchestrator_end_to_end_with_convergence_and_override():
     script = ParsedAnswerScript(
         script_id="s1",
         question_id="q1",
@@ -25,9 +22,23 @@ def test_orchestrator_end_to_end_with_convergence_and_override():
     gemini = MockJsonProvider(
         responses_by_model={
             "gemini-1.5-pro": [
-                {"factor_scores": {"concept_accuracy": 5, "derivation": 1.5, "clarity": 1}, "total_score": 7.5, "justification": "g init"},
-                {"stance_by_reviewer": {"reviewer_2": "support"}, "revised_factor_scores": {"concept_accuracy": 5, "derivation": 1.5, "clarity": 1}, "revised_total_score": 7.5, "revised_justification": "g d1"},
-                {"stance_by_reviewer": {"reviewer_2": "support"}, "revised_factor_scores": {"concept_accuracy": 5.2, "derivation": 1.6, "clarity": 1.1}, "revised_total_score": 7.9, "revised_justification": "g d2"},
+                {
+                    "factor_scores": {"concept_accuracy": 5, "derivation": 1.5, "clarity": 1},
+                    "total_score": 7.5,
+                    "justification": "g init",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_2": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 5, "derivation": 1.5, "clarity": 1},
+                    "revised_total_score": 7.5,
+                    "revised_justification": "g d1",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_2": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 5.2, "derivation": 1.6, "clarity": 1.1},
+                    "revised_total_score": 7.9,
+                    "revised_justification": "g d2",
+                },
                 {"score": 5.3, "justification": "concept strong"},
             ]
         }
@@ -35,9 +46,23 @@ def test_orchestrator_end_to_end_with_convergence_and_override():
     anthropic = MockJsonProvider(
         responses_by_model={
             "claude-3-5-sonnet": [
-                {"factor_scores": {"concept_accuracy": 4.8, "derivation": 1.4, "clarity": 1.2}, "total_score": 7.4, "justification": "a init"},
-                {"stance_by_reviewer": {"reviewer_1": "support"}, "revised_factor_scores": {"concept_accuracy": 5, "derivation": 1.5, "clarity": 1.1}, "revised_total_score": 7.6, "revised_justification": "a d1"},
-                {"stance_by_reviewer": {"reviewer_1": "support"}, "revised_factor_scores": {"concept_accuracy": 5.1, "derivation": 1.6, "clarity": 1.1}, "revised_total_score": 7.8, "revised_justification": "a d2"},
+                {
+                    "factor_scores": {"concept_accuracy": 4.8, "derivation": 1.4, "clarity": 1.2},
+                    "total_score": 7.4,
+                    "justification": "a init",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_1": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 5, "derivation": 1.5, "clarity": 1.1},
+                    "revised_total_score": 7.6,
+                    "revised_justification": "a d1",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_1": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 5.1, "derivation": 1.6, "clarity": 1.1},
+                    "revised_total_score": 7.8,
+                    "revised_justification": "a d2",
+                },
                 {"score": 1.6, "justification": "derivation mostly correct"},
             ]
         }
@@ -77,57 +102,75 @@ def test_orchestrator_end_to_end_with_convergence_and_override():
     result = orchestrator.evaluate_script(script)
     assert len(result["factor_checks"]) == 3
     assert result["supreme_review"]["final_total_score"] == 8.3
-        answer_text="The student explains the integral form correctly but misses one implication.",
-        max_marks=10,
-        factors=[
-            Factor(name="accuracy", weight=6, description="Correctness"),
-            Factor(name="completeness", weight=4, description="Coverage"),
-        ],
+    assert len(result["debate_transcript"]) == 4
+    assert result["supreme_review"]["override_notes"]
+
+
+def test_orchestrator_skips_unknown_factor_specialists():
+    script = ParsedAnswerScript(
+        script_id="s2",
+        question_id="q2",
+        question_text="Q",
+        answer_text="A",
+        max_marks=5,
+        factors=[Factor(name="concept_accuracy", weight=5, description="d")],
     )
 
-    responses = [
-        {"factor_scores": {"accuracy": 5, "completeness": 2}, "total_score": 7, "justification": "r1 init"},
-        {"factor_scores": {"accuracy": 4, "completeness": 3}, "total_score": 7, "justification": "r2 init"},
-        {
-            "stance_by_reviewer": {"reviewer_2": "support"},
-            "revised_factor_scores": {"accuracy": 5, "completeness": 2},
-            "revised_total_score": 7,
-            "revised_justification": "r1 round1",
-        },
-        {
-            "stance_by_reviewer": {"reviewer_1": "support"},
-            "revised_factor_scores": {"accuracy": 4.5, "completeness": 2.5},
-            "revised_total_score": 7,
-            "revised_justification": "r2 round1",
-        },
-        {
-            "stance_by_reviewer": {"reviewer_2": "support"},
-            "revised_factor_scores": {"accuracy": 5, "completeness": 2},
-            "revised_total_score": 7,
-            "revised_justification": "r1 round2",
-        },
-        {
-            "stance_by_reviewer": {"reviewer_1": "support"},
-            "revised_factor_scores": {"accuracy": 5, "completeness": 2},
-            "revised_total_score": 7,
-            "revised_justification": "r2 round2",
-        },
-        {
-            "final_factor_scores": {"accuracy": 5.5, "completeness": 2.5},
-            "final_total_score": 8,
-            "final_justification": "Supreme adjusted based on stronger conceptual precision.",
-            "improvement_areas": ["Cover implications of flux-density relation."],
-            "override_notes": ["Raised accuracy by 0.5 after consistency check."],
-        },
-    ]
+    provider = MockJsonProvider(
+        responses=[
+            {
+                "factor_scores": {"concept_accuracy": 4},
+                "total_score": 4,
+                "justification": "r1",
+            },
+            {
+                "factor_scores": {"concept_accuracy": 4},
+                "total_score": 4,
+                "justification": "r2",
+            },
+            {
+                "stance_by_reviewer": {"reviewer_2": "support"},
+                "revised_factor_scores": {"concept_accuracy": 4},
+                "revised_total_score": 4,
+                "revised_justification": "d1",
+            },
+            {
+                "stance_by_reviewer": {"reviewer_1": "support"},
+                "revised_factor_scores": {"concept_accuracy": 4},
+                "revised_total_score": 4,
+                "revised_justification": "d1",
+            },
+            {
+                "stance_by_reviewer": {"reviewer_2": "support"},
+                "revised_factor_scores": {"concept_accuracy": 4},
+                "revised_total_score": 4,
+                "revised_justification": "d2",
+            },
+            {
+                "stance_by_reviewer": {"reviewer_1": "support"},
+                "revised_factor_scores": {"concept_accuracy": 4},
+                "revised_total_score": 4,
+                "revised_justification": "d2",
+            },
+            {
+                "final_factor_scores": {"concept_accuracy": 4},
+                "final_total_score": 4,
+                "final_justification": "ok",
+                "improvement_areas": [],
+                "override_notes": [],
+            },
+        ]
+    )
 
     orchestrator = EvaluationOrchestrator(
-        provider=MockJsonProvider(responses=responses),
-        model_config=ModelConfig(reviewer_models=["m1", "m2"], supreme_model="supreme"),
-        runtime_config=RuntimeConfig(debate_rounds=5, pairing_strategy="all_to_all", random_seed=1),
+        provider=MultiProviderRouter(providers={"openai": provider}),
+        model_config=ModelConfig(
+            reviewer_models=["openai:m1", "openai:m2"],
+            supreme_model="openai:m3",
+            factor_specialists={"unknown_factor": "openai:m4"},
+        ),
+        runtime_config=RuntimeConfig(debate_rounds=2),
     )
 
     result = orchestrator.evaluate_script(script)
-    assert result["supreme_review"]["final_total_score"] == 8.0
-    assert len(result["debate_transcript"]) == 4
-    assert result["supreme_review"]["override_notes"]
+    assert result["factor_checks"] == []
