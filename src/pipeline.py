@@ -98,3 +98,4 @@ def review_pipeline(
         for script in iter_parsed_scripts(input_file):
             result = orchestrator.evaluate_script(script)
             file.write(json.dumps(result, ensure_ascii=False) + "\n")
+            

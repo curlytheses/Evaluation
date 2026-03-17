@@ -18,6 +18,7 @@ class GeminiProvider:
             },
         )
         text = getattr(response, "text", "").strip()
+        print(f"DEBUG: Raw model response:\n{text}\n")
         if not text:
             return {}
         try:

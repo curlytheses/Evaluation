@@ -10,6 +10,11 @@ def factor_schema(script: ParsedAnswerScript) -> str:
 
 
 def review_prompt(script: ParsedAnswerScript) -> str:
+    factor_template = {
+        f.name: f"number (0–{f.weight})"
+        for f in script.factors
+    }
+    
     return f"""
 ROLE
 You are an exam answerscript evaluator.
@@ -39,13 +44,11 @@ EVALUATION PROCESS
 
 OUTPUT FORMAT (STRICT JSON ONLY)
 
-{{
-  "factor_scores": {{
-      "<factor_name>": number
-  }},
-  "total_score": number,
-  "justification": "Concise evidence-based reasoning referencing the answer"
-}}
+{json.dumps({
+    "factor_scores": factor_template,
+    "total_score": "number",
+    "justification": "Concise evidence-based reasoning referencing the answer"
+}, indent=2)}
 
 SCORING RULES
 - factor_scores values must be between 0 and the factor weight.
