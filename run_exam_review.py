@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from Evaluation.src.parser import build_parser, parse_csv_items, parse_factor_specialists
+from src.parser import build_parser, parse_csv_items, parse_factor_specialists
 from src.pipeline import review_pipeline
 from rich.logging import RichHandler
 

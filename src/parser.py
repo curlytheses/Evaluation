@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Answer script evaluation with multi-LLM debate, "
-            "factor specialists, and OpenAI supreme reviewer."
+            "Factor specialists, and Meta reviewer."
         )
     )
     parser.add_argument("--input_file", required=True, help="JSONL with parsed answer scripts")
