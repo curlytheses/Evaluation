@@ -24,6 +24,7 @@ class GeminiProvider:
             config=config,
         )
         text = getattr(response, "text", "").strip()
+        print(f"Raw model response:\n{text}\n--- End of response ---")
         if not text:
             return {}
         try:
