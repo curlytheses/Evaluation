@@ -23,7 +23,7 @@ def parse_factor_specialists(raw: str) -> dict[str, str]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "IIT-style answer script evaluation with multi-LLM debate, "
+            "Answer script evaluation with multi-LLM debate, "
             "factor specialists, and OpenAI supreme reviewer."
         )
     )
@@ -34,7 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help=(
             "Comma-separated reviewer agent models, e.g. "
-            "gemini:gemini-1.5-pro,anthropic:claude-3-5-sonnet,openai:qwen-max"
+            "gemini:gemini-1.5-pro,anthropic:claude-3-5-sonnet,openai:gpt-5.3"
         ),
     )
     parser.add_argument(
@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Comma-separated factor=model mapping, e.g. "
             "concept_accuracy=gemini:gemini-1.5-pro,"
             "derivation=anthropic:claude-3-5-sonnet,"
-            "clarity=openai:qwen-max"
+            "clarity=openai:gpt-5.3"
         ),
     )
     parser.add_argument("--debate_rounds", type=int, default=6, help="Maximum debate rounds")

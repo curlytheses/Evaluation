@@ -9,7 +9,6 @@ from .models import DebateTurn, Factor, FactorCheck, ParsedAnswerScript, Reviewe
 from .prompts import debate_prompt, factor_review_prompt, review_prompt, supreme_prompt
 from .providers.router import MultiProviderRouter
 from .validators import clip_factor_scores, normalize_total_score, safe_float
-
 logger = logging.getLogger("rich")
 
 

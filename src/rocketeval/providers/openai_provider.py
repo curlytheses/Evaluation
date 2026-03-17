@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import openai
 from ..llm import chat_json
-
 @dataclass(slots=True)
 class OpenAIProvider:
     client: openai.OpenAI

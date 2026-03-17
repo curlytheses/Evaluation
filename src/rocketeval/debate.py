@@ -1,8 +1,6 @@
 import random
 from typing import Literal
-
 from .models import DebateTurn
-
 
 PairingStrategy = Literal["all_to_all", "random", "round_robin"]
 

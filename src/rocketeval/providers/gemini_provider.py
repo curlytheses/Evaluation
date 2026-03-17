@@ -7,7 +7,6 @@ class GeminiProvider:
     client: genai.Client
     temperature: float = 0.0
     max_tokens: int = 1500
-
     def complete_json(self, model: str, prompt: str) -> dict:
         response = self.client.models.generate_content(
             model=model,
@@ -18,12 +17,9 @@ class GeminiProvider:
                 "response_mime_type": "application/json",
             },
         )
-
         text = getattr(response, "text", "").strip()
-
         if not text:
             return {}
-
         try:
             return json.loads(text)
         except json.JSONDecodeError:
