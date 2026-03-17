@@ -1,0 +1,2 @@
+script_id,question_id,final_total_score,final_factor_scores,final_justification,improvement_areas,override_notes
+script-001,q-1,18,"statement_correctness:5; proof_quality:8; notation_and_clarity:5","The response accurately states the theorem and mostly soundly explains the proof with minor rigor gaps.","Add a tighter epsilon-delta style argument around the limiting step","No major override"

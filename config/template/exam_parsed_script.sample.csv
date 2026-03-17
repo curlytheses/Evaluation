@@ -1,0 +1,4 @@
+script_id,question_id,question_text,answer_text,max_marks,factors
+script-001,q-1,State and prove the divergence theorem.,"The divergence theorem, also known as Gauss's theorem, states that the total outward flux of a vector field through a closed surface is equal to the volume integral of the divergence of the vector field over the region enclosed by the surface.
+Mathematically, if V is a solid region in R^3 with boundary surface S (oriented outward), and F = (F1, F2, F3) is a continuously differentiable vector field defined on V, then:
+∯_S F · n dS = ∭_V (∇ · F) dV",20,"statement_correctness::5::Accurate theorem statement with assumptions||proof_quality::10::Logical proof steps and mathematical rigor||notation_and_clarity::5::Notation correctness and clarity"

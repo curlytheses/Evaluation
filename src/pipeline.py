@@ -1,10 +1,13 @@
 from __future__ import annotations
-import json
+
+import csv
 import logging
 import os
+
 import anthropic
 import openai
 from google import genai
+
 from src.rocketeval.config import ModelConfig, RuntimeConfig
 from src.rocketeval.io import ensure_parent_dir, iter_parsed_scripts
 from src.rocketeval.orchestrator import EvaluationOrchestrator
@@ -12,7 +15,9 @@ from src.rocketeval.providers.anthropic_provider import AnthropicProvider
 from src.rocketeval.providers.gemini_provider import GeminiProvider
 from src.rocketeval.providers.openai_provider import OpenAIProvider
 from src.rocketeval.providers.router import MultiProviderRouter
+
 logger = logging.getLogger("rich")
+
 
 def load_env_file() -> None:
     try:
@@ -21,10 +26,10 @@ def load_env_file() -> None:
         return
     load_dotenv()
 
+
 def build_router_from_env() -> MultiProviderRouter:
     load_env_file()
 
-    # Read environment variables
     env = {
         "openai_key": os.getenv("OPENAI_API_KEY"),
         "openai_url": os.getenv("OPENAI_BASE_URL"),
@@ -37,36 +42,45 @@ def build_router_from_env() -> MultiProviderRouter:
 
     providers = {
         "openai": OpenAIProvider(
-            client=openai.OpenAI(
-                api_key=env["openai_key"],
-                base_url=env["openai_url"]
-            )
+            client=openai.OpenAI(api_key=env["openai_key"], base_url=env["openai_url"])
         )
     }
 
     optional_providers = {
         "anthropic": (
             env["anthropic_key"],
-            lambda k: AnthropicProvider(
-            client=anthropic.Anthropic(api_key=k)
-        )
-    ),
+            lambda k: AnthropicProvider(client=anthropic.Anthropic(api_key=k)),
+        ),
         "gemini": (
             env["gemini_key"],
-            lambda k: GeminiProvider(
-            client=genai.Client(api_key=k)
-        )
-    ),
-}
+            lambda k: GeminiProvider(client=genai.Client(api_key=k)),
+        ),
+    }
 
     providers.update(
         {name: factory(key) for name, (key, factory) in optional_providers.items() if key}
     )
 
-    return MultiProviderRouter(
-        providers=providers,
-        default_provider="openai"
-    )
+    return MultiProviderRouter(providers=providers, default_provider="openai")
+
+
+def _flatten_result(result: dict) -> dict[str, str | float]:
+    supreme = result.get("supreme_review", {})
+    factor_scores = supreme.get("final_factor_scores", {}) or {}
+    factor_scores_blob = "; ".join(f"{k}:{v}" for k, v in factor_scores.items())
+    improvements = " | ".join(supreme.get("improvement_areas", []) or [])
+    overrides = " | ".join(supreme.get("override_notes", []) or [])
+
+    return {
+        "script_id": result.get("script_id", ""),
+        "question_id": result.get("question_id", ""),
+        "final_total_score": supreme.get("final_total_score", ""),
+        "final_factor_scores": factor_scores_blob,
+        "final_justification": supreme.get("final_justification", ""),
+        "improvement_areas": improvements,
+        "override_notes": overrides,
+    }
+
 
 def review_pipeline(
     input_file: str,
@@ -94,8 +108,19 @@ def review_pipeline(
     )
 
     ensure_parent_dir(output_file)
-    with open(output_file, "w", encoding="utf-8") as file:
+    with open(output_file, "w", encoding="utf-8", newline="") as file:
+        fieldnames = [
+            "script_id",
+            "question_id",
+            "final_total_score",
+            "final_factor_scores",
+            "final_justification",
+            "improvement_areas",
+            "override_notes",
+        ]
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+
         for script in iter_parsed_scripts(input_file):
             result = orchestrator.evaluate_script(script)
-            file.write(json.dumps(result, ensure_ascii=False) + "\n")
-            
+            writer.writerow(_flatten_result(result))

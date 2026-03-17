@@ -9,7 +9,7 @@ This system supports **multi-provider reviewer ensembles** (Gemini, Anthropic, Q
 3. **Convergence rule**: early stop when all reviewer stances are `support` in the latest 2 rounds.
 4. **Dedicated factor specialists**: one dedicated LLM agent call per factor (e.g., concept_accuracy, derivation, clarity).
 5. **Supreme OpenAI adjudication**: receives reviewer outputs + debate transcript + factor checks and can override anything.
-6. **Final output**: factor-wise marks, final marks, final justification, improvement areas.
+6. **Final output**: CSV rows with factor-wise marks, final marks, final justification, and improvement areas.
 
 ## Environment setup (.env)
 
@@ -23,6 +23,26 @@ GEMINI_API_KEY=...
 ```
 
 The pipeline automatically loads `.env` (via `python-dotenv` if installed).
+
+
+## Input CSV format
+
+The pipeline accepts CSV instead of JSON/JSONL. Required columns:
+
+- `script_id`
+- `question_id`
+- `question_text`
+- `answer_text`
+- `max_marks`
+- `factors`
+
+`factors` must use this encoding:
+
+`factor_name::weight::description||factor_name::weight::description`
+
+Example:
+
+`concept_accuracy::6::Correctness||derivation::2::Logical derivation||clarity::2::Clarity`
 
 ## Dependencies
 
@@ -38,8 +58,8 @@ Recommended runtime dependencies:
 
 ```bash
 python run_exam_review.py \
-  --input_file config/template/exam_parsed_script.sample.jsonl \
-  --output_file outputs/review_results.jsonl \
+  --input_file config/template/exam_parsed_script.sample.csv \
+  --output_file outputs/review_results.csv \
   --reviewer_models gemini:gemini-1.5-pro,anthropic:claude-3-5-sonnet,openai:qwen-max \
   --factor_specialists concept_accuracy=gemini:gemini-1.5-pro,derivation=anthropic:claude-3-5-sonnet,clarity=openai:qwen-max \
   --supreme_model openai:gpt-4o \
