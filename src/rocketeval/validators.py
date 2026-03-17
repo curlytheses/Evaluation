@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any
-from .models import Factor
+from .models import Factor, ParsedAnswerScript
 
 DEFAULT_ROUND_DIGITS = 2
 
@@ -22,3 +22,26 @@ def normalize_total_score(max_marks: float, proposed_score: Any, fallback: float
     candidate = safe_float(proposed_score, default=fallback)
     normalized = min(max(candidate, 0.0), max_marks)
     return round(normalized, DEFAULT_ROUND_DIGITS)
+
+
+def validate_review_output(output: dict[str, Any], script: ParsedAnswerScript) -> bool:
+    try:
+        scores = output["factor_scores"]
+        total = safe_float(output["total_score"])
+
+        for factor in script.factors:
+            if factor.name not in scores:
+                return False
+            score = safe_float(scores[factor.name], default=-1)
+            if not (0 <= score <= factor.weight):
+                return False
+
+        if not (0 <= total <= script.max_marks):
+            return False
+
+        if abs(sum(safe_float(value) for value in scores.values()) - total) > 0.25:
+            return False
+
+        return isinstance(output.get("justification"), str)
+    except Exception:
+        return False

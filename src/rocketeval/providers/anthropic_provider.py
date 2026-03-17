@@ -2,12 +2,15 @@ from dataclasses import dataclass
 import json
 import anthropic
 
+
 @dataclass(slots=True)
 class AnthropicProvider:
     client: anthropic.Anthropic
     temperature: float = 0.0
     max_tokens: int = 1500
-    def complete_json(self, model: str, prompt: str) -> dict:
+
+    def complete_json(self, model: str, prompt: str, response_schema: dict | None = None) -> dict:
+        _ = response_schema
         response = self.client.messages.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],

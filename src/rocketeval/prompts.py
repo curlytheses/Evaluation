@@ -9,6 +9,23 @@ def factor_schema(script: ParsedAnswerScript) -> str:
     )
 
 
+def review_schema(script: ParsedAnswerScript) -> dict[str, object]:
+    factor_props = {f.name: {"type": "number"} for f in script.factors}
+    return {
+        "type": "object",
+        "properties": {
+            "factor_scores": {
+                "type": "object",
+                "properties": factor_props,
+                "required": list(factor_props.keys()),
+            },
+            "total_score": {"type": "number"},
+            "justification": {"type": "string"},
+        },
+        "required": ["factor_scores", "total_score", "justification"],
+    }
+
+
 def review_prompt(script: ParsedAnswerScript) -> str:
     factor_template = {
         f.name: f"number (0–{f.weight})"
