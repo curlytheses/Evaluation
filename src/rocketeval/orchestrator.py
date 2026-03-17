@@ -45,19 +45,7 @@ class EvaluationOrchestrator:
             reviewer_id = f"reviewer_{index}"
             payload: dict[str, Any] = {}
             for attempt in range(1, MAX_REVIEW_RETRIES + 1):
-                try:
-                    candidate = self.provider.complete_json(agent_model=model, prompt=prompt, response_schema=schema)
-                except Exception as error:
-                    logger.warning(
-                        "Error while generating initial review for %s on script %s (attempt %s/%s): %s",
-                        reviewer_id,
-                        script.script_id,
-                        attempt,
-                        MAX_REVIEW_RETRIES,
-                        error,
-                    )
-                    continue
-
+                candidate = self.provider.complete_json(agent_model=model, prompt=prompt, response_schema=schema)
                 if validate_review_output(candidate, script):
                     payload = candidate
                     break
