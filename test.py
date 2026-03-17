@@ -1,29 +1,33 @@
+import csv
 import json
 import time
-from typing import Dict, Any, List
+from typing import Any, Dict
+
 from google import genai
 
-# =========================================
-# CONFIG
-# =========================================
 API_KEY = ""
 MODEL_NAME = "gemini-2.5-flash"
-INPUT_FILE = "E:\\WorkLoad\\IITBHU\\Evaluation\\Evaluation\\config\\template\\exam_parsed_script.sample.jsonl"
-OUTPUT_FILE = "output.jsonl"
+INPUT_FILE = "config/template/exam_parsed_script.sample.csv"
+OUTPUT_FILE = "output.csv"
 
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 
 client = genai.Client(api_key=API_KEY)
 
-# =========================================
-# PROMPT BUILDER
-# =========================================
+
+def parse_factors(raw: str) -> list[dict[str, Any]]:
+    factors: list[dict[str, Any]] = []
+    for item in raw.split("||"):
+        if not item.strip():
+            continue
+        name, weight, description = item.split("::", 2)
+        factors.append({"name": name, "weight": float(weight), "description": description})
+    return factors
+
+
 def build_prompt(script: Dict[str, Any]) -> str:
-    factor_template = {
-        f["name"]: f"number (0–{f['weight']})"
-        for f in script["factors"]
-    }
+    factor_template = {f["name"]: f"number (0–{f['weight']})" for f in script["factors"]}
 
     return f"""
 ROLE
@@ -50,44 +54,27 @@ STRICT INSTRUCTIONS
 - No markdown or extra text
 
 OUTPUT FORMAT:
-{json.dumps({
-    "factor_scores": factor_template,
-    "total_score": "number",
-    "justification": "string"
-}, indent=2)}
-
-SCORING RULES
-- Respect factor weights strictly
-- Penalize incomplete reasoning
-- Ensure sum consistency
+{json.dumps({'factor_scores': factor_template, 'total_score': 'number', 'justification': 'string'}, indent=2)}
 """
 
-# =========================================
-# DYNAMIC SCHEMA
-# =========================================
-def build_schema(script: Dict[str, Any]) -> Dict[str, Any]:
-    factor_props = {
-        f["name"]: {"type": "number"}
-        for f in script["factors"]
-    }
 
+def build_schema(script: Dict[str, Any]) -> Dict[str, Any]:
+    factor_props = {f["name"]: {"type": "number"} for f in script["factors"]}
     return {
         "type": "object",
         "properties": {
             "factor_scores": {
                 "type": "object",
                 "properties": factor_props,
-                "required": list(factor_props.keys())
+                "required": list(factor_props.keys()),
             },
             "total_score": {"type": "number"},
-            "justification": {"type": "string"}
+            "justification": {"type": "string"},
         },
-        "required": ["factor_scores", "total_score", "justification"]
+        "required": ["factor_scores", "total_score", "justification"],
     }
 
-# =========================================
-# VALIDATION
-# =========================================
+
 def validate_output(output: Dict[str, Any], script: Dict[str, Any]) -> bool:
     try:
         scores = output["factor_scores"]
@@ -95,26 +82,14 @@ def validate_output(output: Dict[str, Any], script: Dict[str, Any]) -> bool:
 
         for f in script["factors"]:
             name, weight = f["name"], f["weight"]
-
-            if name not in scores:
+            if name not in scores or not (0 <= scores[name] <= weight):
                 return False
 
-            if not (0 <= scores[name] <= weight):
-                return False
-
-        if not (0 <= total <= script["max_marks"]):
-            return False
-
-        if abs(sum(scores.values()) - total) > 0.25:
-            return False
-
-        return True
+        return 0 <= total <= script["max_marks"] and abs(sum(scores.values()) - total) <= 0.25
     except Exception:
         return False
 
-# =========================================
-# GEMINI CALL
-# =========================================
+
 def evaluate_script(script: Dict[str, Any]) -> Dict[str, Any]:
     prompt = build_prompt(script)
     schema = build_schema(script)
@@ -124,57 +99,50 @@ def evaluate_script(script: Dict[str, Any]) -> Dict[str, Any]:
             response = client.models.generate_content(
                 model=MODEL_NAME,
                 contents=prompt,
-                config={
-                    "temperature": 0.2,
-                    "response_mime_type": "application/json",
-                    "response_schema": schema
-                }
+                config={"temperature": 0.2, "response_mime_type": "application/json", "response_schema": schema},
             )
-
-            raw = response.text.strip()
-            parsed = json.loads(raw)
-
+            parsed = json.loads(response.text.strip())
             if validate_output(parsed, script):
                 return parsed
-
-            print(f"[Retry {attempt+1}] Invalid output for {script['script_id']}")
-
-        except Exception as e:
-            print(f"[Retry {attempt+1}] Error for {script['script_id']}:", str(e))
+        except Exception as exc:
+            print(f"[Retry {attempt + 1}] Error for {script['script_id']}: {exc}")
 
         time.sleep(RETRY_DELAY)
 
-    return {
-        "factor_scores": {},
-        "total_score": 0,
-        "justification": "Evaluation failed after retries"
-    }
+    return {"factor_scores": {}, "total_score": 0, "justification": "Evaluation failed after retries"}
 
-# =========================================
-# MAIN PIPELINE
-# =========================================
-def process_jsonl(input_path: str, output_path: str):
-    with open(input_path, "r", encoding="utf-8") as infile, \
-         open(output_path, "w", encoding="utf-8") as outfile:
 
-        for line in infile:
-            script = json.loads(line.strip())
+def process_csv(input_path: str, output_path: str) -> None:
+    with open(input_path, "r", encoding="utf-8", newline="") as infile, open(
+        output_path, "w", encoding="utf-8", newline=""
+    ) as outfile:
+        reader = csv.DictReader(infile)
+        writer = csv.DictWriter(
+            outfile,
+            fieldnames=["script_id", "question_id", "total_score", "factor_scores", "justification"],
+        )
+        writer.writeheader()
 
-            print(f"Processing: {script['script_id']}")
-
-            result = evaluate_script(script)
-
-            # Merge input + output
-            final_output = {
-                "evaluation": result
+        for row in reader:
+            script = {
+                "script_id": row["script_id"],
+                "question_id": row["question_id"],
+                "question_text": row["question_text"],
+                "answer_text": row["answer_text"],
+                "max_marks": float(row["max_marks"]),
+                "factors": parse_factors(row.get("factors", "")),
             }
+            result = evaluate_script(script)
+            writer.writerow(
+                {
+                    "script_id": script["script_id"],
+                    "question_id": script["question_id"],
+                    "total_score": result["total_score"],
+                    "factor_scores": "; ".join(f"{k}:{v}" for k, v in result["factor_scores"].items()),
+                    "justification": result["justification"],
+                }
+            )
 
-            outfile.write(json.dumps(final_output) + "\n")
 
-    print("\n✅ All scripts processed successfully.")
-
-# =========================================
-# RUN
-# =========================================
 if __name__ == "__main__":
-    process_jsonl(INPUT_FILE, OUTPUT_FILE)
+    process_csv(INPUT_FILE, OUTPUT_FILE)

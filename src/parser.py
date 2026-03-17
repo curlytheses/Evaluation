@@ -27,8 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Factor specialists, and Meta reviewer."
         )
     )
-    parser.add_argument("--input_file", required=True, help="JSONL with parsed answer scripts")
-    parser.add_argument("--output_file", required=True, help="Output JSONL file")
+    parser.add_argument("--input_file", required=True, help="CSV with parsed answer scripts")
+    parser.add_argument("--output_file", required=True, help="Output CSV file")
     parser.add_argument(
         "--reviewer_models",
         required=True,

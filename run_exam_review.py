@@ -1,11 +1,21 @@
 from __future__ import annotations
+
 import logging
+
 from src.parser import build_parser, parse_csv_items, parse_factor_specialists
-from src.pipeline import review_pipeline
-from rich.logging import RichHandler
+
 
 def main(argv: list[str] | None = None) -> None:
-    logging.basicConfig(level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
+    from src.pipeline import review_pipeline
+
+    try:
+        from rich.logging import RichHandler
+
+        handlers = [RichHandler()]
+    except ImportError:
+        handlers = None
+
+    logging.basicConfig(level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=handlers)
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -23,6 +33,6 @@ def main(argv: list[str] | None = None) -> None:
         random_seed=args.random_seed,
     )
 
+
 if __name__ == "__main__":
     main()
-
