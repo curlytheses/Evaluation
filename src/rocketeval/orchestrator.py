@@ -6,10 +6,11 @@ from typing import Any
 from .config import ModelConfig, RuntimeConfig
 from .debate import all_supporting_last_two_rounds, select_peer_set
 from .models import DebateTurn, Factor, FactorCheck, ParsedAnswerScript, ReviewerAssessment, SupremeReview
-from .prompts import debate_prompt, factor_review_prompt, review_prompt, supreme_prompt
+from .prompts import debate_prompt, factor_review_prompt, review_prompt, review_schema, supreme_prompt
 from .providers.router import MultiProviderRouter
-from .validators import clip_factor_scores, normalize_total_score, safe_float
+from .validators import clip_factor_scores, normalize_total_score, safe_float, validate_review_output
 logger = logging.getLogger("rich")
+MAX_REVIEW_RETRIES = 3
 
 
 class EvaluationOrchestrator:
@@ -37,9 +38,37 @@ class EvaluationOrchestrator:
 
     def _initial_reviews(self, script: ParsedAnswerScript) -> list[ReviewerAssessment]:
         assessments: list[ReviewerAssessment] = []
+        prompt = review_prompt(script)
+        schema = review_schema(script)
+
         for index, model in enumerate(self.model_config.reviewer_models, start=1):
             reviewer_id = f"reviewer_{index}"
-            payload = self.provider.complete_json(agent_model=model, prompt=review_prompt(script))
+            payload: dict[str, Any] = {}
+            for attempt in range(1, MAX_REVIEW_RETRIES + 1):
+                try:
+                    candidate = self.provider.complete_json(agent_model=model, prompt=prompt, response_schema=schema)
+                except Exception as error:
+                    logger.warning(
+                        "Error while generating initial review for %s on script %s (attempt %s/%s): %s",
+                        reviewer_id,
+                        script.script_id,
+                        attempt,
+                        MAX_REVIEW_RETRIES,
+                        error,
+                    )
+                    continue
+
+                if validate_review_output(candidate, script):
+                    payload = candidate
+                    break
+                logger.warning(
+                    "Invalid initial review output for %s on script %s (attempt %s/%s)",
+                    reviewer_id,
+                    script.script_id,
+                    attempt,
+                    MAX_REVIEW_RETRIES,
+                )
+
             factor_scores = clip_factor_scores(script.factors, payload.get("factor_scores", {}))
             assessments.append(
                 ReviewerAssessment(
@@ -47,7 +76,8 @@ class EvaluationOrchestrator:
                     model=model,
                     factor_scores=factor_scores,
                     total_score=self._normalize_assessment_total(script.max_marks, payload.get("total_score"), factor_scores),
-                    justification=str(payload.get("justification", "")).strip(),
+                    justification=str(payload.get("justification", "")).strip()
+                    or "Evaluation failed after retries",
                 )
             )
         return assessments

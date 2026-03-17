@@ -173,3 +173,139 @@ def test_orchestrator_skips_unknown_factor_specialists():
 
     result = orchestrator.evaluate_script(script)
     assert result["factor_checks"] == []
+
+
+def test_orchestrator_retries_invalid_initial_review_output():
+    script = ParsedAnswerScript(
+        script_id="s3",
+        question_id="q3",
+        question_text="Q",
+        answer_text="A",
+        max_marks=5,
+        factors=[Factor(name="concept_accuracy", weight=5, description="d")],
+    )
+
+    provider = MockJsonProvider(
+        responses_by_model={
+            "m1": [
+                {
+                    "factor_scores": {"concept_accuracy": 10},
+                    "total_score": 10,
+                    "justification": "invalid",
+                },
+                {
+                    "factor_scores": {"concept_accuracy": 4},
+                    "total_score": 4,
+                    "justification": "valid",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_2": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 4},
+                    "revised_total_score": 4,
+                    "revised_justification": "d1",
+                },
+            ],
+            "m3": [
+                {
+                    "factor_scores": {"concept_accuracy": 4},
+                    "total_score": 4,
+                    "justification": "valid r2",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_1": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 4},
+                    "revised_total_score": 4,
+                    "revised_justification": "d1",
+                },
+            ],
+            "m2": [
+                {
+                    "final_factor_scores": {"concept_accuracy": 4},
+                    "final_total_score": 4,
+                    "final_justification": "ok",
+                    "improvement_areas": [],
+                    "override_notes": [],
+                }
+            ],
+        }
+    )
+
+    orchestrator = EvaluationOrchestrator(
+        provider=MultiProviderRouter(providers={"openai": provider}),
+        model_config=ModelConfig(
+            reviewer_models=["openai:m1", "openai:m3"],
+            supreme_model="openai:m2",
+            factor_specialists={},
+        ),
+        runtime_config=RuntimeConfig(debate_rounds=1),
+    )
+
+    result = orchestrator.evaluate_script(script)
+    assert result["initial_assessments"][0]["total_score"] == 4
+    assert result["initial_assessments"][0]["justification"] == "valid"
+
+
+def test_orchestrator_retries_initial_review_after_provider_exception():
+    script = ParsedAnswerScript(
+        script_id="s4",
+        question_id="q4",
+        question_text="Q",
+        answer_text="A",
+        max_marks=5,
+        factors=[Factor(name="concept_accuracy", weight=5, description="d")],
+    )
+
+    provider = MockJsonProvider(
+        responses_by_model={
+            "m1": [
+                ValueError("Model returned invalid JSON"),
+                {
+                    "factor_scores": {"concept_accuracy": 3.5},
+                    "total_score": 3.5,
+                    "justification": "valid after exception",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_2": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 3.5},
+                    "revised_total_score": 3.5,
+                    "revised_justification": "d1",
+                },
+            ],
+            "m3": [
+                {
+                    "factor_scores": {"concept_accuracy": 3.5},
+                    "total_score": 3.5,
+                    "justification": "peer",
+                },
+                {
+                    "stance_by_reviewer": {"reviewer_1": "support"},
+                    "revised_factor_scores": {"concept_accuracy": 3.5},
+                    "revised_total_score": 3.5,
+                    "revised_justification": "d1",
+                },
+            ],
+            "m2": [
+                {
+                    "final_factor_scores": {"concept_accuracy": 3.5},
+                    "final_total_score": 3.5,
+                    "final_justification": "ok",
+                    "improvement_areas": [],
+                    "override_notes": [],
+                }
+            ],
+        }
+    )
+
+    orchestrator = EvaluationOrchestrator(
+        provider=MultiProviderRouter(providers={"openai": provider}),
+        model_config=ModelConfig(
+            reviewer_models=["openai:m1", "openai:m3"],
+            supreme_model="openai:m2",
+            factor_specialists={},
+        ),
+        runtime_config=RuntimeConfig(debate_rounds=1),
+    )
+
+    result = orchestrator.evaluate_script(script)
+    assert result["initial_assessments"][0]["total_score"] == 3.5
+    assert result["initial_assessments"][0]["justification"] == "valid after exception"

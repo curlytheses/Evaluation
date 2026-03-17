@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 class JsonProvider(Protocol):
-    def complete_json(self, model: str, prompt: str) -> dict:
+    def complete_json(self, model: str, prompt: str, response_schema: dict | None = None) -> dict:
         """Execute a completion and return parsed JSON."""
 
 @dataclass(slots=True)
@@ -18,14 +18,14 @@ class MultiProviderRouter:
             raise ValueError(
                 f"Default provider '{self.default_provider}' not available. Choose from: {available}"
             )
-    def complete_json(self, agent_model: str, prompt: str) -> dict:
+    def complete_json(self, agent_model: str, prompt: str, response_schema: dict | None = None) -> dict:
         provider_name, model = self._split_agent_model(agent_model)
         provider = self.providers.get(provider_name)
         if provider is None:
             raise ValueError(
                 f"Provider '{provider_name}' not configured. Available providers: {sorted(self.providers.keys())}"
             )
-        return provider.complete_json(model=model, prompt=prompt)
+        return provider.complete_json(model=model, prompt=prompt, response_schema=response_schema)
     def _split_agent_model(self, agent_model: str) -> tuple[str, str]:
         if ":" in agent_model:
             provider_name, model = agent_model.split(":", 1)
