@@ -1,28 +1,24 @@
 from dataclasses import dataclass
 import json
-import anthropic
-
+import cohere
 
 @dataclass(slots=True)
-class AnthropicProvider:
-    client: anthropic.Anthropic
+class CohereProvider:
+    client: cohere.ClientV2
     temperature: float = 0.0
     max_tokens: int = 1500
 
     def complete_json(self, model: str, prompt: str, response_schema: dict | None = None) -> dict:
         _ = response_schema
-        response = self.client.messages.create(
+        response = self.client.chat(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=self.max_tokens,
             temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            response_format={"type": "json_object"},
         )
-        text = "".join(
-            part.text for part in response.content if part.type == "text"
-        ).strip()
-        print(f"Raw model response:\n{text}\n")
-        if not text:
-            return {}
+        text = response.message.content[0].text or "{}"
+        print(f"Cohere raw response:\n{text}")
         try:
             return json.loads(text)
         except json.JSONDecodeError:
